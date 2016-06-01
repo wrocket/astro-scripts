@@ -124,14 +124,18 @@ def centr_search_pixels(image, radius, center):
 	return white_pixels
 
 
+def cetr_try_strides(im, opts):
+	for stride in opts.centroid_stride_sequence_px:
+		center = centr_find_pixel(im, stride)
+		if center:
+			return center
+	return None
+
+
+# Scan the monochrome threshold image for an obvious centroid, returning None if one is not found.
 def centr_scan_monochrome(mono_image, opts):
 	with Image.open(mono_image) as im:
-		center = None
-		for stride in opts.centroid_stride_sequence_px:
-			center = centr_find_pixel(im, stride)
-			if center:
-				break
-
+		center = cetr_try_strides(im, opts)
 		if not center:
 			print('Unable to find centroid using search stride sequence of %s' %
 				str(_stride_sequence_px), file=sys.stderr)
@@ -172,6 +176,7 @@ def find_center(input_image, opts):
 			os.remove(temp_file)
 
 
+# Given an iterable of center info objects, find the appropriate final crop size.
 def crop_calculate_size(center_infos, opts):
 	size_x = max(i.size_x for i in center_infos)
 	size_y = max(i.size_y for i in center_infos)
@@ -181,6 +186,7 @@ def crop_calculate_size(center_infos, opts):
 def log(input_image, message):
 	fname = os.path.split(input_image)[-1]
 	print('%s: %s' % (fname, message.strip()))
+
 
 # Center and crop single frame.
 def get_frame_centroid(input_image, opts):
@@ -236,7 +242,7 @@ with Pool(opts.centroid_pool_size) as centroid_pool:
 
 filtered_crop_info = list(filter(lambda x: x != None, crop_info))
 if len(crop_info) != len(filtered_crop_info):
-	print('WARNING: Some frames were dicarded after alignment.')
+	print('WARNING: Some frames were discarded after alignment.')
 
 print('Completed centroid detection step in %ims' %
 	millis_between(process_start, datetime.datetime.now()))
