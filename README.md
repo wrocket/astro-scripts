@@ -1,9 +1,8 @@
 # Wrocket's Astro-scripts
-----
+
 ## What is this?
 These are any little programs I write for the purpose of processing, organizing, or otherwise managing my modest astrophotos.
 
-----
 ## align_planet.py
 This script is used in the following situation:
 
