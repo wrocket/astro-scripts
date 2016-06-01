@@ -10,7 +10,7 @@ This script is used in the following situation:
 1. I have an arbitrary number of photo frames of a bright object (such as a planet) taken at roughly the same settings on the same date
 2. The frames aren't aligned, or close to being aligned, since I took them from an untracked mount using a photo camera instead of a video camera.
 
-The script uses a threshold mask to locate the planet in each frame, and then crops the frames so that the planet is aligned perfectly. The resulting images can be then fed into a program like RegiStax or similar.
+The script uses a threshold mask to locate the planet in each frame, and then crops the frames so that the planet is aligned perfectly. The resulting images can be then fed into a program like [RegiStax](http://www.astronomie.be/registax/) or similar.
 
 For example, consider this set of input frames, captured by manually slewing my untracked telescope and triggering the shutter a few times:
 
@@ -22,7 +22,7 @@ Running the command:
 
 This script produces the following result, with each frame nicely aligned. You're now ready for stacking!
 
-![Unaligned Jupiter](https://github.com/wrocket/astro-scripts/blob/master/docs/images/align_output.gif)
+![Aligned Jupiter](https://github.com/wrocket/astro-scripts/blob/master/docs/images/align_output.gif)
 
 ### Requirements
 * [Python 3](http://www.python.org/) (I run/test on 3.4.3)
@@ -30,7 +30,7 @@ This script produces the following result, with each frame nicely aligned. You'r
 * The [Pillow](http://python-pillow.org/) Python module
 
 ### Doesn't RegiStax already do that?
-RegiStax is great when you have a set of frames where the target doesn't move much between frames (such as a video), but I've gotten far better (and faster results) using this alignment script.
+RegiStax is great when you have a set of frames where the target doesn't move much between frames (such as a video), but I've gotten far better (and faster) results using this alignment script and selecting the "no alignment" option in RegiStax.
 
 ### Why don't you use a video camera for planetary?
 I don't own the requisite hardware, and I'm on a tight budget. It's also fun writing software to do this!
