@@ -124,6 +124,37 @@ def centr_search_pixels(image, radius, center):
 	return white_pixels
 
 
+def centr_scan_monochrome(mono_image, opts):
+	with Image.open(mono_image) as im:
+		center = None
+		for stride in opts.centroid_stride_sequence_px:
+			center = centr_find_pixel(im, stride)
+			if center:
+				break
+
+		if not center:
+			print('Unable to find centroid using search stride sequence of %s' %
+				str(_stride_sequence_px), file=sys.stderr)
+			return None
+
+		white_pixels = centr_search_pixels(im, opts.centroid_search_radius_px, center)
+		if len(white_pixels) == 0:
+			print('Unable to find centroid around coordinate %d, %d' %
+				center, file=sys.stderr)
+			return None
+
+		x_vals = list([p[0] for p in white_pixels])
+		y_vals = list([p[1] for p in white_pixels])
+		avg_x = sum(x_vals) / float(len(x_vals))
+		avg_y = sum(y_vals) / float(len(y_vals))
+		center_pt = (round(avg_x), round(avg_y))
+		x_extent = extent(x_vals)
+		y_extent = extent(y_vals)
+		dx = x_extent[1] - x_extent[0]
+		dy = y_extent[1] - y_extent[0]
+		return ImageCentroid(center_pt, dx, dy)
+
+
 # Locate and scan the centroid from an image containing a single, obvious centroid.
 def find_center(input_image, opts):
 	if not os.path.isfile(input_image):
@@ -135,38 +166,10 @@ def find_center(input_image, opts):
 		cmd = ['convert', input_image, '-threshold', '%d%%' %
 			opts.centroid_threshold_pct, temp_file]
 		subprocess.check_output(cmd)
-		with Image.open(temp_file) as im:
-			center = None
-			for stride in opts.centroid_stride_sequence_px:
-				center = centr_find_pixel(im, stride)
-				if center:
-					break
-			if center:
-				white_pixels = centr_search_pixels(im, opts.centroid_search_radius_px, center)
-				if len(white_pixels) > 0:
-					x_vals = list([p[0] for p in white_pixels])
-					y_vals = list([p[1] for p in white_pixels])
-					avg_x = sum(x_vals) / float(len(x_vals))
-					avg_y = sum(y_vals) / float(len(y_vals))
-					center_pt = (round(avg_x), round(avg_y))
-					x_extent = extent(x_vals)
-					y_extent = extent(y_vals)
-					dx = x_extent[1] - x_extent[0]
-					dy = y_extent[1] - y_extent[0]
-					return ImageCentroid(center_pt, dx, dy)
-				else:
-					print('Unable to find centroid around coordinate %d, %d' %
-						center, file=sys.stderr)
-					return None
-			else:
-				print('Unable to find centroid using search stride sequence of %s' %
-					str(_stride_sequence_px), file=sys.stderr)
-				return None
-	except:
-		# Make sure all temp files are deleted when we exit here.
+		return centr_scan_monochrome(temp_file, opts)
+	finally:
 		if os.path.isfile(temp_file):
 			os.remove(temp_file)
-		raise
 
 
 def crop_calculate_size(center_infos, opts):
@@ -231,14 +234,18 @@ arg_tuples = [(frame, opts) for frame in sys.argv[2:]]
 with Pool(opts.centroid_pool_size) as centroid_pool:
 	crop_info = centroid_pool.map(pickle_centroid, arg_tuples)
 
+filtered_crop_info = list(filter(lambda x: x != None, crop_info))
+if len(crop_info) != len(filtered_crop_info):
+	print('WARNING: Some frames were dicarded after alignment.')
+
 print('Completed centroid detection step in %ims' %
 	millis_between(process_start, datetime.datetime.now()))
 
 # Calculate the frame size of the resulting frames from each frame's dimensions and location
-crop_size = crop_calculate_size([x[1] for x in crop_info], opts)
+crop_size = crop_calculate_size([x[1] for x in filtered_crop_info], opts)
 print('Output frames will be of size %ix%i' % (crop_size[0], crop_size[1]))
 
 # Perform the crop/center operation on each frame.
-crop_args = [(c[0], c[1], crop_size, opts) for c in crop_info]
+crop_args = [(c[0], c[1], crop_size, opts) for c in filtered_crop_info]
 with Pool(opts.crop_pool_size) as crop_pool:
 	crop_pool.map(pickle_crop, crop_args)
