@@ -14,11 +14,15 @@ The script uses a threshold mask to locate the planet in each frame, and then cr
 
 For example, consider this set of input frames:
 
+![Unaligned Jupiter](https://github.com/wrocket/astro-scripts/blob/master/docs/images/align_input.gif)
+
 Running the command:
 
     align_planet.py ./output_directory ./input_files/*.jpg
 
 This script produces the following result, with each frame nicely aligned. You're now ready for stacking!
+
+![Unaligned Jupiter](https://github.com/wrocket/astro-scripts/blob/master/docs/images/align_output.gif)
 
 ### Requirements
 * [Python 3](http://www.python.org/) (I run/test on 3.4.3)
