@@ -12,7 +12,7 @@ This script is used in the following situation:
 
 The script uses a threshold mask to locate the planet in each frame, and then crops the frames so that the planet is aligned perfectly. The resulting images can be then fed into a program like RegiStax or similar.
 
-For example, consider this set of input frames:
+For example, consider this set of input frames, captured by manually slewing my untracked telescope and triggering the shutter a few times:
 
 ![Unaligned Jupiter](https://github.com/wrocket/astro-scripts/blob/master/docs/images/align_input.gif)
 
