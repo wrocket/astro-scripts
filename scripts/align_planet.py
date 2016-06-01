@@ -60,6 +60,9 @@ class ProcessingOpts:
 		# E.g. Frames with a maximum 100x100 planet will be cropped to 300x300 if possible.
 		self.crop_ratio = 3.5
 
+		# Process pool size for cropping.
+		self.crop_pool_size = 4
+
 
 # Class describing the image centroid's location and geometry.
 class ImageCentroid:
@@ -129,7 +132,8 @@ def find_center(input_image, opts):
 	input_ext = os.path.splitext(input_image)[-1]
 	temp_file = tempfile.mkstemp(suffix=input_ext)[1]
 	try:
-		cmd = ['convert', input_image, '-threshold', '%d%%' % opts.centroid_threshold_pct, temp_file]
+		cmd = ['convert', input_image, '-threshold', '%d%%' %
+			opts.centroid_threshold_pct, temp_file]
 		subprocess.check_output(cmd)
 		with Image.open(temp_file) as im:
 			center = None
@@ -151,10 +155,12 @@ def find_center(input_image, opts):
 					dy = y_extent[1] - y_extent[0]
 					return ImageCentroid(center_pt, dx, dy)
 				else:
-					print('Unable to find centroid around coordinate %d, %d' % center, file=sys.stderr)
+					print('Unable to find centroid around coordinate %d, %d' %
+						center, file=sys.stderr)
 					return None
 			else:
-				print('Unable to find centroid using search stride sequence of %s' % str(_stride_sequence_px), file=sys.stderr)
+				print('Unable to find centroid using search stride sequence of %s' %
+					str(_stride_sequence_px), file=sys.stderr)
 				return None
 	except:
 		# Make sure all temp files are deleted when we exit here.
@@ -174,9 +180,7 @@ def log(input_image, message):
 	print('%s: %s' % (fname, message.strip()))
 
 # Center and crop single frame.
-def get_frame_centroid(arg_tuple):
-	input_image = arg_tuple[0]
-	opts = arg_tuple[1]
+def get_frame_centroid(input_image, opts):
 	start = datetime.datetime.now()
 	# Locate the center of the planet in the frame
 	cent = find_center(input_image, opts)
@@ -186,18 +190,30 @@ def get_frame_centroid(arg_tuple):
 		log(input_image, 'No centroid info found! (%ims)' % millis)
 		return None
 	center_str = '(%i, %i)' % (cent.center[0], cent.center[1])
-	log(input_image, 'Found center at %s, size %ix%ipx (%ims)' % (center_str, cent.size_x, cent.size_y, millis))
+	log(input_image, 'Found center at %s, size %ix%ipx (%ims)' %
+		(center_str, cent.size_x, cent.size_y, millis))
 	return (input_image, cent)
+
+
+def pickle_centroid(args):
+	return get_frame_centroid(*args)
+
 
 def crop_on_center(input_image, center, image_size, opts):
 	base_name = os.path.split(input_image)[-1]
 	ext = os.path.splitext(base_name)
 	out_file = os.path.join(opts.output_dir, '%s_aligned%s' % (ext[0], ext[1]))
-	log(input_image, 'Crop to %ix%i, centered on (%i, %i), to file %s' % (image_size[0], image_size[1], center.center[0], center.center[1], out_file))
+	log(input_image, 'Crop to %ix%i, centered on (%i, %i), to file %s' %
+		(image_size[0], image_size[1], center.center[0], center.center[1], out_file))
 	cx = center.center[0] - round(image_size[0] / 2.0)
 	cy = center.center[1] - round(image_size[1] / 2.0)
-	args = ['convert', input_image, '-crop', '%dx%d+%d+%d' % (image_size[0], image_size[1], cx, cy), out_file]
+	args = ['convert', input_image, '-crop', '%dx%d+%d+%d' %
+		(image_size[0], image_size[1], cx, cy), out_file]
 	subprocess.check_output(args)
+
+
+def pickle_crop(args):
+	crop_on_center(*args)
 
 
 def initialize(opts):
@@ -213,14 +229,16 @@ initialize(opts)
 process_start = datetime.datetime.now()
 arg_tuples = [(frame, opts) for frame in sys.argv[2:]]  
 with Pool(opts.centroid_pool_size) as centroid_pool:
-	crop_info = centroid_pool.map(get_frame_centroid, arg_tuples)
+	crop_info = centroid_pool.map(pickle_centroid, arg_tuples)
 
-print('Completed centroid detection step in %ims' %	millis_between(process_start, datetime.datetime.now()))
+print('Completed centroid detection step in %ims' %
+	millis_between(process_start, datetime.datetime.now()))
 
 # Calculate the frame size of the resulting frames from each frame's dimensions and location
 crop_size = crop_calculate_size([x[1] for x in crop_info], opts)
 print('Output frames will be of size %ix%i' % (crop_size[0], crop_size[1]))
 
 # Perform the crop/center operation on each frame.
-for c in crop_info:
-	crop_on_center(c[0], c[1], crop_size, opts)
+crop_args = [(c[0], c[1], crop_size, opts) for c in crop_info]
+with Pool(opts.crop_pool_size) as crop_pool:
+	crop_pool.map(pickle_crop, crop_args)
