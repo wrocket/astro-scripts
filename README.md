@@ -24,8 +24,8 @@ This script produces the following result, with each frame nicely aligned. You'r
 ![Aligned Jupiter](https://github.com/wrocket/astro-scripts/blob/master/docs/images/align_output.gif)
 
 ### Requirements
-* [Python 3](http://www.python.org/) (I run/test on 3.4.3)
-* [ImageMagick](http://www.imagemagick.org/) ( run/test with 6.7.7)
+* [Python 3](http://www.python.org/) (tested with 3.4.3)
+* [ImageMagick](http://www.imagemagick.org/) (tested with 6.7.7)
 * The [Pillow](http://python-pillow.org/) Python module
 
 ### Doesn't RegiStax already do that?
